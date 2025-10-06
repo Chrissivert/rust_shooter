@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use crate::zombie::Zombie;
 
 pub const PLAYER_SPEED: f32 = 500.0;
 pub const BULLET_SPEED: f32 = 800.0;
@@ -68,7 +69,7 @@ pub fn move_bullets(
 pub fn bullet_hit_zombie(
     mut commands: Commands,
     bullet_query: Query<(Entity, &Transform), With<Bullet>>,
-    zombie_query: Query<(Entity, &Transform), With<super::Zombie>>,
+    zombie_query: Query<(Entity, &Transform), With<Zombie>>,
 ) {
     for (b_entity, b_transform) in bullet_query.iter() {
         for (z_entity, z_transform) in zombie_query.iter() {
