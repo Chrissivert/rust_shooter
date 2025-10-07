@@ -85,7 +85,7 @@ pub fn bullet_hit_zombie(
     mut zombie_query: Query<(Entity, &Transform, &mut Zombie)>,
     mut score: ResMut<Score>,
 ) {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     for (b_entity, b_transform) in bullet_query.iter() {
         for (z_entity, z_transform, mut zombie) in zombie_query.iter_mut() {
@@ -115,8 +115,8 @@ fn apply_damage(zombie: &mut Zombie, amount: f32) {
 }
 
 fn add_floating_score(commands: &mut Commands, position: Vec3, text: &str, color: Color, rng: &mut impl Rng) {
-    let x_offset = rng.gen_range(-10.0..10.0);
-    let y_offset = rng.gen_range(10.0..25.0);
+    let x_offset = rng.random_range(-10.0..10.0);
+    let y_offset = rng.random_range(10.0..25.0);
 
     commands.spawn(Text2dBundle {
         text: Text::from_section(

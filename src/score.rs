@@ -16,7 +16,7 @@ pub fn update_floating_scores(
     time: Res<Time>,
     mut query: Query<(Entity, &mut Transform, &mut FloatingScore, &mut Text)>,
 ) {
-    for (entity, mut transform, mut fs, mut text) in query.iter_mut() {
+    for (entity, mut transform, mut fs, text) in query.iter_mut() {
         fs.timer.tick(time.delta());
         transform.translation.y += 20.0 * time.delta_seconds(); // move upward
         if fs.timer.finished() {
@@ -26,7 +26,7 @@ pub fn update_floating_scores(
 }
 
 
-pub fn setup_score_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn setup_score_ui(mut commands: Commands) {
     commands.spawn(TextBundle {
         text: Text::from_section(
             "Score: 0",

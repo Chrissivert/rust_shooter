@@ -47,8 +47,3 @@ pub fn update_survival_time(
         text.sections[0].value = format!("Time: {:.1} s", survival_time.0);
     }
 }
-
-/// Reset timer (call this when restarting the game)
-pub fn reset_survival_time(mut survival_time: ResMut<SurvivalTime>) {
-    survival_time.0 = 0.0;
-}

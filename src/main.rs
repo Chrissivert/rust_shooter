@@ -6,6 +6,7 @@ mod zombie;
 mod gameover;
 mod score;
 mod time;
+mod abilities;
 
 fn setup_camera(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
@@ -41,6 +42,7 @@ fn main() {
         .add_systems(Startup, zombie::setup_zombie_stats)
         .add_systems(Startup, time::setup_ui)
         .add_systems(Startup, score::setup_score_ui)
+        .add_systems(Startup, abilities::setup_abilities)
         // Resources
         .insert_resource(gameover::GameOver(false))
         .insert_resource(time::SurvivalTime(0.0))
@@ -69,5 +71,8 @@ fn main() {
         // Score systems
         .add_systems(Update, score::update_floating_scores)
         .add_systems(Update, score::update_score_ui)
+
+         .add_systems(Update, abilities::handle_abilities_input)
+        .add_systems(Update, abilities::update_ability_ui)
         .run();
 }

@@ -80,8 +80,8 @@ pub fn spawn_zombies(
     stats: Res<ZombieStats>,
 ) {
     if timer.0.tick(time.delta()).just_finished() {
-        let mut rng = rand::thread_rng();
-        let x = rng.gen_range(-375.0..375.0);
+        let mut rng = rand::rng();
+        let x = rng.random_range(-375.0..375.0);
 
         let zombie_entity = commands.spawn(SpriteBundle {
             texture: frames.0[0].clone(),
