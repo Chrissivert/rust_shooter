@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use rand::Rng;
 use crate::zombie::Zombie;
 use crate::score::{Score, FloatingScore};
+use crate::abilities::Abilities;
 
 pub const PLAYER_SPEED: f32 = 500.0;
 pub const BULLET_SPEED: f32 = 800.0;
@@ -11,6 +12,19 @@ pub struct Player;
 
 #[derive(Component)]
 pub struct Bullet;
+
+#[derive(Resource)]
+pub struct Weapon {
+    pub is_minigun: bool, 
+    pub fire_timer: Timer, 
+}
+
+pub fn setup_weapon(mut commands: Commands) {
+    commands.insert_resource(Weapon {
+        is_minigun: false,
+        fire_timer: Timer::from_seconds(0.05, TimerMode::Repeating),
+    });
+}
 
 // -------------------- Player Movement --------------------
 pub fn player_movement(
@@ -34,14 +48,34 @@ pub fn shooting(
     mut commands: Commands,
     query: Query<&Transform, With<Player>>,
     asset_server: Res<AssetServer>,
+    time: Res<Time>,
+    abilities: Res<Abilities>,
+    mut weapon: ResMut<Weapon>,
 ) {
-    if keyboard.just_pressed(KeyCode::Space) {
-        for transform in query.iter() {
-            spawn_bullet(&mut commands, transform.translation);
-            play_bullet_sound(&mut commands, &asset_server);
+    // Check if minigun is active
+    weapon.is_minigun = abilities.active.get(1).copied().unwrap_or(false);
+
+    if weapon.is_minigun {
+        // Minigun: hold to shoot
+        weapon.fire_timer.tick(time.delta());
+        if keyboard.pressed(KeyCode::Space) && weapon.fire_timer.finished() {
+            for transform in query.iter() {
+                spawn_bullet(&mut commands, transform.translation);
+                play_bullet_sound(&mut commands, &asset_server);
+            }
+        }
+    } else {
+        // Normal weapon: tap to shoot (ignore timer)
+        if keyboard.just_pressed(KeyCode::Space) {
+            for transform in query.iter() {
+                spawn_bullet(&mut commands, transform.translation);
+                play_bullet_sound(&mut commands, &asset_server);
+            }
         }
     }
 }
+
+
 
 fn spawn_bullet(commands: &mut Commands, player_pos: Vec3) {
     commands.spawn(SpriteBundle {

@@ -39,6 +39,7 @@ fn main() {
         .add_systems(Startup, setup_camera)
         .add_systems(Startup, setup_background_music)
         .add_systems(Startup, player::setup_player)
+        .add_systems(Startup, player::setup_weapon)
         .add_systems(Startup, zombie::setup_zombie_stats)
         .add_systems(Startup, time::setup_ui)
         .add_systems(Startup, score::setup_score_ui)
