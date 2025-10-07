@@ -4,7 +4,8 @@ use bevy::audio::{AudioBundle, PlaybackSettings, Volume};
 mod player;
 mod zombie;
 mod gameover;
-mod time; // <- add your timer module
+mod score;
+mod time; 
 
 fn setup_camera(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
@@ -39,10 +40,11 @@ fn main() {
         .add_systems(Startup, player::setup_player)
         .add_systems(Startup, zombie::setup_zombie_assets)
         .add_systems(Startup, zombie::setup_zombie_timer)
-        .add_systems(Startup, time::setup_ui) // <- spawn timer UI
+        .add_systems(Startup, time::setup_ui) 
         // Resources
         .insert_resource(gameover::GameOver(false))
-        .insert_resource(time::SurvivalTime(0.0)) // <- start timer
+        .insert_resource(time::SurvivalTime(0.0)) 
+        .insert_resource(score::Score(0))
         // Player
         .add_systems(Update, player::player_movement)
         .add_systems(Update, player::shooting)
@@ -54,10 +56,15 @@ fn main() {
         .add_systems(Update, zombie::move_zombies)
         .add_systems(Update, zombie::update_healthbars)
         // Timer
-        .add_systems(Update, time::update_survival_time) // <- update timer each frame
+        .add_systems(Update, time::update_survival_time) 
         // Game
         .add_systems(Update, gameover::check_zombie_bottom)
         .add_systems(Update, gameover::show_game_over)
         .add_systems(Update, gameover::restart_game)
+
+        .add_systems(Update, score:: update_floating_scores)
+                .add_systems(Startup, score::setup_score_ui)
+        .add_systems(Update, score::update_score_ui)
+
         .run();
 }

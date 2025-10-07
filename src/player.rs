@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use crate::zombie::Zombie;
+use crate::score::{Score, FloatingScore};
+
 
 pub const PLAYER_SPEED: f32 = 500.0;
 pub const BULLET_SPEED: f32 = 800.0;
@@ -73,30 +75,67 @@ pub fn move_bullets(
         }
     }
 }
-
 pub fn bullet_hit_zombie(
     mut commands: Commands,
     bullet_query: Query<(Entity, &Transform), With<Bullet>>,
-    mut zombie_query: Query<(Entity, &mut Zombie, &Transform)>,
+    mut zombie_query: Query<(Entity, &Transform, &mut Zombie)>,
+    mut score: ResMut<Score>,
 ) {
     for (b_entity, b_transform) in bullet_query.iter() {
-        for (z_entity, mut zombie, z_transform) in zombie_query.iter_mut() {
+        for (z_entity, z_transform, mut zombie) in zombie_query.iter_mut() {
             let distance = b_transform.translation.distance(z_transform.translation);
             if distance < 25.0 {
-                // Destroy the bullet
+                // Despawn bullet
                 commands.entity(b_entity).despawn();
 
                 // Reduce zombie health
-                zombie.health -= 25.0; // adjust damage per bullet as needed
+                zombie.health -= 25.0;
 
-                // If zombie health is depleted, despawn
+                // Spawn floating "+10" for hit
+                commands.spawn(Text2dBundle {
+                    text: Text::from_section(
+                        "+10",
+                        TextStyle {
+                            font: Default::default(),
+                            font_size: 20.0,
+                            color: Color::YELLOW,
+                        },
+                    ),
+                    transform: Transform::from_translation(z_transform.translation + Vec3::new(0.0, 20.0, 1.0)),
+                    ..default()
+                })
+                .insert(FloatingScore { timer: Timer::from_seconds(0.5, TimerMode::Once) });
+
+                // Increment score for hit
+                score.0 += 10;
+
+                // If zombie is dead
                 if zombie.health <= 0.0 {
-                    commands.entity(z_entity).despawn_recursive();
+                    commands.entity(z_entity).despawn_recursive(); // removes zombie and health bar
+
+                    // Spawn floating "+100" for kill
+                    commands.spawn(Text2dBundle {
+                        text: Text::from_section(
+                            "+100",
+                            TextStyle {
+                                font: Default::default(),
+                                font_size: 20.0,
+                                color: Color::GOLD,
+                            },
+                        ),
+                        transform: Transform::from_translation(z_transform.translation + Vec3::new(0.0, 20.0, 1.0)),
+                        ..default()
+                    })
+                    .insert(FloatingScore { timer: Timer::from_seconds(0.5, TimerMode::Once) });
+
+                    // Increment score for kill
+                    score.0 += 90; // 10 already added above, so total 100
                 }
             }
         }
     }
 }
+
 
 
 
