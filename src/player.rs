@@ -29,14 +29,15 @@ pub fn player_movement(
     }
 }
 
-// Shooting system
 pub fn shooting(
     keyboard: Res<Input<KeyCode>>,
     mut commands: Commands,
     query: Query<&Transform, With<Player>>,
+    asset_server: Res<AssetServer>,
 ) {
     if keyboard.just_pressed(KeyCode::Space) {
         for transform in query.iter() {
+            // Spawn bullet
             commands.spawn(SpriteBundle {
                 transform: Transform::from_xyz(transform.translation.x, transform.translation.y + 30., 0.),
                 sprite: Sprite {
@@ -47,9 +48,17 @@ pub fn shooting(
                 ..default()
             })
             .insert(Bullet);
+
+            // Play bullet sound
+            let bullet_sound = asset_server.load("audio/bullet.ogg");
+            commands.spawn(AudioBundle {
+                source: bullet_sound,
+                settings: PlaybackSettings::default(),
+            });
         }
     }
 }
+
 
 // Bullet movement system
 pub fn move_bullets(
