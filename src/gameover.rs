@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use crate::zombie::Zombie;
 use crate::player::Bullet;
+use crate::time::SurvivalTime;
 
 #[derive(Resource)]
 pub struct GameOver(pub bool);
@@ -58,6 +59,7 @@ pub fn show_game_over(mut commands: Commands, game_over: Res<GameOver>, query: Q
 pub fn restart_game(mut commands: Commands,
                     mut interaction_query: Query<(&Interaction, &mut BackgroundColor), With<RestartButton>>,
                     mut game_over: ResMut<GameOver>,
+                    mut survival_time: ResMut<SurvivalTime>,
                     zombies: Query<Entity, With<Zombie>>,
                     bullets: Query<Entity, With<Bullet>>,
                     ui_elements: Query<Entity, With<GameOverUI>>) 
@@ -65,6 +67,7 @@ pub fn restart_game(mut commands: Commands,
     for (interaction, _) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
             game_over.0 = false;
+            survival_time.0 = 0.0;
             for e in zombies.iter().chain(bullets.iter()).chain(ui_elements.iter()) { commands.entity(e).despawn_recursive(); }
         }
     }
