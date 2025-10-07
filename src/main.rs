@@ -39,14 +39,21 @@ fn main() {
         .add_systems(Startup, zombie::setup_zombie_assets)
         .add_systems(Startup, zombie::setup_zombie_timer)
         .insert_resource(gameover::GameOver(false))
-        // Update systems
+        
+        
+        // Player
         .add_systems(Update, player::player_movement)
         .add_systems(Update, player::shooting)
         .add_systems(Update, player::move_bullets)
         .add_systems(Update, player::bullet_hit_zombie)
+
+        // Zombie
         .add_systems(Update, zombie::spawn_zombies)
         .add_systems(Update, zombie::animate_zombies)
         .add_systems(Update, zombie::move_zombies)
+        .add_systems(Update, zombie::update_healthbars)
+
+        // Game
         .add_systems(Update, gameover::check_zombie_bottom)
         .add_systems(Update, gameover::show_game_over)
         .add_systems(Update, gameover::restart_game)

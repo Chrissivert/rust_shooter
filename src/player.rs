@@ -74,22 +74,30 @@ pub fn move_bullets(
     }
 }
 
-// Bullet hits zombie system
 pub fn bullet_hit_zombie(
     mut commands: Commands,
     bullet_query: Query<(Entity, &Transform), With<Bullet>>,
-    zombie_query: Query<(Entity, &Transform), With<Zombie>>,
+    mut zombie_query: Query<(Entity, &mut Zombie, &Transform)>,
 ) {
     for (b_entity, b_transform) in bullet_query.iter() {
-        for (z_entity, z_transform) in zombie_query.iter() {
+        for (z_entity, mut zombie, z_transform) in zombie_query.iter_mut() {
             let distance = b_transform.translation.distance(z_transform.translation);
             if distance < 25.0 {
+                // Destroy the bullet
                 commands.entity(b_entity).despawn();
-                commands.entity(z_entity).despawn();
+
+                // Reduce zombie health
+                zombie.health -= 25.0; // adjust damage per bullet as needed
+
+                // If zombie health is depleted, despawn
+                if zombie.health <= 0.0 {
+                    commands.entity(z_entity).despawn_recursive();
+                }
             }
         }
     }
 }
+
 
 
 
