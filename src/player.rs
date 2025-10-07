@@ -12,7 +12,13 @@ pub const BULLET_SPEED: f32 = 800.;
 #[derive(Component)]
 pub struct WeaponSprite {
     pub pistol: Handle<Image>,
+    pub shotgun: Handle<Image>,
     pub minigun: Handle<Image>,
+}
+
+#[derive(Component)]
+pub struct ShotgunBullet {
+    pub direction: Vec3,
 }
 
 
@@ -22,6 +28,7 @@ pub fn setup_player(
 ) {
     // Load weapon images
     let pistol_handle = asset_server.load("images/pistol.png");
+    let shotgun_handle = asset_server.load("images/shotgun.png");
     let minigun_handle = asset_server.load("images/minigun.png");
 
     commands.spawn(SpriteBundle {
@@ -43,6 +50,7 @@ pub fn setup_player(
 })
 .insert(WeaponSprite {
     pistol: pistol_handle,
+    shotgun: shotgun_handle,
     minigun: minigun_handle,
 });
     });
@@ -50,19 +58,28 @@ pub fn setup_player(
 
 
 pub fn update_weapon_sprite(
-    weapon: Res<Weapon>,
+    weapons: Res<Weapons>, 
     mut query: Query<(&mut Handle<Image>, &mut Sprite, &WeaponSprite)>
 ) {
     for (mut texture, mut sprite, weapon_sprite) in &mut query {
-        if weapon.is_minigun {
-            *texture = weapon_sprite.minigun.clone();  
-            sprite.custom_size = Some(Vec2::new(8., 8.)); // minigun size
-        } else {
-            *texture = weapon_sprite.pistol.clone(); 
-            sprite.custom_size = Some(Vec2::new(6., 6.)); // pistol size
+        match weapons.active {
+            0 => { // pistol
+                *texture = weapon_sprite.pistol.clone();
+                sprite.custom_size = Some(Vec2::new(6., 6.));
+            }
+            1 => { // shotgun
+                *texture = weapon_sprite.shotgun.clone();
+                sprite.custom_size = Some(Vec2::new(8., 8.));
+            }
+            2 => { // minigun
+                *texture = weapon_sprite.minigun.clone();
+                sprite.custom_size = Some(Vec2::new(8., 8.));
+            }
+            _ => {}
         }
     }
 }
+
 
 
 pub fn setup_weapon(mut commands: Commands) {
@@ -133,12 +150,6 @@ pub fn shooting(
     }
 }
 
-#[derive(Component)]
-pub struct ShotgunBullet {
-    pub direction: Vec3,
-}
-
-// Update bullet movement for shotgun bullets
 pub fn move_bullets(
     mut commands: Commands,
     mut query: Query<(Entity, &mut Transform, Option<&ShotgunBullet>), With<Bullet>>,

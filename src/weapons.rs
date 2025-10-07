@@ -135,13 +135,12 @@ pub fn handle_weapon_input(
                 if score.0 >= weapons.costs[i] {
                     score.0 -= weapons.costs[i];
                     weapons.purchased[i] = true;
-                    weapons.active = i; // select it immediately
+                    weapons.active = i;
                     println!("Purchased and selected weapon {}", i + 1);
                 } else {
                     println!("Not enough score to purchase weapon {}", i + 1);
                 }
             } else {
-                // Select weapon if already purchased
                 weapons.active = i;
                 println!("Selected weapon {}", i + 1);
             }
