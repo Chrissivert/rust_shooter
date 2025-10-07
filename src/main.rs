@@ -1,10 +1,25 @@
 use bevy::prelude::*;
-mod player; // import the player module
-mod zombie; // your existing zombie.rs
+use bevy::audio::{AudioBundle, PlaybackSettings, Volume};
+
+mod player;
+mod zombie;
 mod gameover;
 
 fn setup_camera(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
+}
+
+fn setup_background_music(asset_server: Res<AssetServer>, mut commands: Commands) {
+    let music = asset_server.load("audio/pvz-music.ogg");
+
+    commands.spawn(AudioBundle {
+        source: music,
+        settings: PlaybackSettings {
+            mode: bevy::audio::PlaybackMode::Loop,
+            volume: Volume::new_relative(0.5),
+            ..default()
+        },
+    });
 }
 
 fn main() {
@@ -17,14 +32,14 @@ fn main() {
             }),
             ..default()
         }))
-        // Systems
+        // Startup systems
         .add_systems(Startup, setup_camera)
+        .add_systems(Startup, setup_background_music)
         .add_systems(Startup, player::setup_player)
         .add_systems(Startup, zombie::setup_zombie_assets)
         .add_systems(Startup, zombie::setup_zombie_timer)
         .insert_resource(gameover::GameOver(false))
-
-
+        // Update systems
         .add_systems(Update, player::player_movement)
         .add_systems(Update, player::shooting)
         .add_systems(Update, player::move_bullets)
