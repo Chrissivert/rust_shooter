@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use rand::Rng;
-use crate::{zombie::Zombie, score::{Score, FloatingScore}, abilities::Abilities};
+use crate::{zombie::Zombie, score::{Score, FloatingScore}, weapons::Weapons};
 
 pub const PLAYER_SPEED: f32 = 500.;
 pub const BULLET_SPEED: f32 = 800.;
@@ -9,13 +9,61 @@ pub const BULLET_SPEED: f32 = 800.;
 #[derive(Component)] pub struct Bullet;
 #[derive(Resource)] pub struct Weapon { pub is_minigun: bool, pub fire_timer: Timer }
 
-pub fn setup_player(mut commands: Commands) {
+#[derive(Component)]
+pub struct WeaponSprite {
+    pub pistol: Handle<Image>,
+    pub minigun: Handle<Image>,
+}
+
+
+pub fn setup_player(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    // Load weapon images
+    let pistol_handle = asset_server.load("images/pistol.png");
+    let minigun_handle = asset_server.load("images/minigun.png");
+
     commands.spawn(SpriteBundle {
         transform: Transform::from_xyz(0., -250., 0.),
-        sprite: Sprite { color: Color::BLUE, custom_size: Some(Vec2::new(10., 10.)), ..default() },
+        sprite: Sprite { custom_size: Some(Vec2::new(12., 12.)), ..default() },
         ..default()
-    }).insert(Player);
+    })
+    .insert(Player)
+    .with_children(|parent| {
+        parent.spawn(SpriteBundle {
+    texture: pistol_handle.clone(),
+    transform: Transform {
+        translation: Vec3::new(0., 20., 1.),
+        rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_2),
+        scale: Vec3::splat(5.0),
+        ..default()
+    },
+    ..default()
+})
+.insert(WeaponSprite {
+    pistol: pistol_handle,
+    minigun: minigun_handle,
+});
+    });
 }
+
+
+pub fn update_weapon_sprite(
+    weapon: Res<Weapon>,
+    mut query: Query<(&mut Handle<Image>, &mut Sprite, &WeaponSprite)>
+) {
+    for (mut texture, mut sprite, weapon_sprite) in &mut query {
+        if weapon.is_minigun {
+            *texture = weapon_sprite.minigun.clone();  
+            sprite.custom_size = Some(Vec2::new(8., 8.)); // minigun size
+        } else {
+            *texture = weapon_sprite.pistol.clone(); 
+            sprite.custom_size = Some(Vec2::new(6., 6.)); // pistol size
+        }
+    }
+}
+
 
 pub fn setup_weapon(mut commands: Commands) {
     commands.insert_resource(Weapon {
@@ -32,12 +80,24 @@ pub fn player_movement(keyboard: Res<Input<KeyCode>>, mut query: Query<&mut Tran
     }
 }
 
-pub fn shooting(keyboard: Res<Input<KeyCode>>, mut commands: Commands, query: Query<&Transform, With<Player>>,
-                asset_server: Res<AssetServer>, time: Res<Time>, abilities: Res<Abilities>, mut weapon: ResMut<Weapon>) {
-    weapon.is_minigun = abilities.active.get(1).copied().unwrap_or(false);
+pub fn shooting(
+    keyboard: Res<Input<KeyCode>>,
+    mut commands: Commands,
+    query: Query<&Transform, With<Player>>,
+    asset_server: Res<AssetServer>,
+    time: Res<Time>,
+    weapons: Res<Weapons>,
+    mut weapon: ResMut<Weapon>,
+) {
+    // Check if minigun is active
+    weapon.is_minigun = weapons.active == 1;
+
     let shoot = if weapon.is_minigun {
-        weapon.fire_timer.tick(time.delta()); keyboard.pressed(KeyCode::Space) && weapon.fire_timer.finished()
-    } else { keyboard.just_pressed(KeyCode::Space) };
+        weapon.fire_timer.tick(time.delta());
+        keyboard.pressed(KeyCode::Space) && weapon.fire_timer.finished()
+    } else {
+        keyboard.just_pressed(KeyCode::Space)
+    };
 
     if shoot {
         for transform in &query {
@@ -46,11 +106,13 @@ pub fn shooting(keyboard: Res<Input<KeyCode>>, mut commands: Commands, query: Qu
                 sprite: Sprite { color: Color::YELLOW, custom_size: Some(Vec2::new(3., 7.)), ..default() },
                 ..default()
             }).insert(Bullet);
+
             let sound = asset_server.load("audio/bullet.ogg");
             commands.spawn(AudioBundle { source: sound, settings: PlaybackSettings::default(), ..default() });
         }
     }
 }
+
 
 pub fn move_bullets(mut commands: Commands, mut query: Query<(Entity, &mut Transform), With<Bullet>>, time: Res<Time>) {
     for (e, mut t) in &mut query {

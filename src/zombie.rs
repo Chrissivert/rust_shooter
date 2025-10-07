@@ -49,7 +49,7 @@ pub fn ramp_zombie_difficulty(time: Res<Time>, mut stats: ResMut<ZombieStats>, m
 // ---------------- Spawning ----------------
 pub fn spawn_zombies(mut commands: Commands, time: Res<Time>, mut timer: ResMut<ZombieSpawnTimer>, frames: Res<ZombieFrames>, stats: Res<ZombieStats>) {
     if timer.0.tick(time.delta()).just_finished() {
-        let x = rand::thread_rng().gen_range(-375.0..375.0);
+        let x = rand::thread_rng().random_range(-375.0..375.0);
 
         commands.spawn(SpriteBundle {
             texture: frames.0[0].clone(),

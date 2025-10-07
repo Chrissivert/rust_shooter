@@ -6,7 +6,7 @@ mod zombie;
 mod gameover;
 mod score;
 mod time;
-mod abilities;
+mod weapons; // renamed from abilities
 
 fn setup_camera(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
@@ -43,7 +43,8 @@ fn main() {
         .add_systems(Startup, zombie::setup_zombie_stats)
         .add_systems(Startup, time::setup_ui)
         .add_systems(Startup, score::setup_score_ui)
-        .add_systems(Startup, abilities::setup_abilities)
+        .add_systems(Startup, weapons::setup_weapons) // weapons system
+
         // Resources
         .insert_resource(gameover::GameOver(false))
         .insert_resource(time::SurvivalTime(0.0))
@@ -52,28 +53,35 @@ fn main() {
             zombie::INITIAL_SPAWN_INTERVAL,
             TimerMode::Repeating,
         )))
+
         // Player systems
         .add_systems(Update, player::player_movement)
         .add_systems(Update, player::shooting)
         .add_systems(Update, player::move_bullets)
         .add_systems(Update, player::bullet_hit_zombie)
+        .add_systems(Update, player::update_weapon_sprite)
+
         // Zombie systems
-        .add_systems(Update, zombie::ramp_zombie_difficulty) 
+        .add_systems(Update, zombie::ramp_zombie_difficulty)
         .add_systems(Update, zombie::spawn_zombies)
         .add_systems(Update, zombie::move_zombies)
-        .add_systems(Update,zombie::update_healthbars)
+        .add_systems(Update, zombie::update_healthbars)
         .add_systems(Update, zombie::animate_zombies)
+
         // Timer
         .add_systems(Update, time::update_survival_time)
+
         // Game systems
         .add_systems(Update, gameover::check_zombie_bottom)
         .add_systems(Update, gameover::show_game_over)
         .add_systems(Update, gameover::restart_game)
+
         // Score systems
         .add_systems(Update, score::update_floating_scores)
         .add_systems(Update, score::update_score_ui)
 
-         .add_systems(Update, abilities::handle_abilities_input)
-        .add_systems(Update, abilities::update_ability_ui)
+        // Weapons input & UI
+        .add_systems(Update, weapons::handle_weapon_input)
+        .add_systems(Update, weapons::update_weapon_ui)
         .run();
 }
