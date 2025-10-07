@@ -1,7 +1,7 @@
 use bevy::prelude::*;
+use rand::Rng;
 use crate::zombie::Zombie;
 use crate::score::{Score, FloatingScore};
-
 
 pub const PLAYER_SPEED: f32 = 500.0;
 pub const BULLET_SPEED: f32 = 800.0;
@@ -12,7 +12,7 @@ pub struct Player;
 #[derive(Component)]
 pub struct Bullet;
 
-// Player movement system
+// -------------------- Player Movement --------------------
 pub fn player_movement(
     keyboard: Res<Input<KeyCode>>,
     mut query: Query<&mut Transform, With<Player>>,
@@ -20,17 +20,15 @@ pub fn player_movement(
 ) {
     for mut transform in query.iter_mut() {
         let mut direction = 0.0;
-        if keyboard.pressed(KeyCode::Left) || keyboard.pressed(KeyCode::A) {
-            direction -= 1.0;
-        }
-        if keyboard.pressed(KeyCode::Right) || keyboard.pressed(KeyCode::D) {
-            direction += 1.0;
-        }
-        transform.translation.x += direction * PLAYER_SPEED * time.delta_seconds();
-        transform.translation.x = transform.translation.x.clamp(-375.0, 375.0);
+        if keyboard.pressed(KeyCode::Left) || keyboard.pressed(KeyCode::A) { direction -= 1.0; }
+        if keyboard.pressed(KeyCode::Right) || keyboard.pressed(KeyCode::D) { direction += 1.0; }
+
+        transform.translation.x = (transform.translation.x + direction * PLAYER_SPEED * time.delta_seconds())
+            .clamp(-375.0, 375.0);
     }
 }
 
+// -------------------- Shooting --------------------
 pub fn shooting(
     keyboard: Res<Input<KeyCode>>,
     mut commands: Commands,
@@ -39,30 +37,34 @@ pub fn shooting(
 ) {
     if keyboard.just_pressed(KeyCode::Space) {
         for transform in query.iter() {
-            // Spawn bullet
-            commands.spawn(SpriteBundle {
-                transform: Transform::from_xyz(transform.translation.x, transform.translation.y + 30., 0.),
-                sprite: Sprite {
-                    color: Color::rgb(1.0, 1.0, 0.0),
-                    custom_size: Some(Vec2::new(3., 7.)),
-                    ..default()
-                },
-                ..default()
-            })
-            .insert(Bullet);
-
-            // Play bullet sound
-            let bullet_sound = asset_server.load("audio/bullet.ogg");
-            commands.spawn(AudioBundle {
-                source: bullet_sound,
-                settings: PlaybackSettings::default(),
-            });
+            spawn_bullet(&mut commands, transform.translation);
+            play_bullet_sound(&mut commands, &asset_server);
         }
     }
 }
 
+fn spawn_bullet(commands: &mut Commands, player_pos: Vec3) {
+    commands.spawn(SpriteBundle {
+        transform: Transform::from_xyz(player_pos.x, player_pos.y + 30., 0.),
+        sprite: Sprite {
+            color: Color::YELLOW,
+            custom_size: Some(Vec2::new(3., 7.)),
+            ..default()
+        },
+        ..default()
+    })
+    .insert(Bullet);
+}
 
-// Bullet movement system
+fn play_bullet_sound(commands: &mut Commands, asset_server: &Res<AssetServer>) {
+    let sound = asset_server.load("audio/bullet.ogg");
+    commands.spawn(AudioBundle {
+        source: sound,
+        settings: PlaybackSettings::default(),
+    });
+}
+
+// -------------------- Bullet Movement --------------------
 pub fn move_bullets(
     mut commands: Commands,
     mut query: Query<(Entity, &mut Transform), With<Bullet>>,
@@ -75,77 +77,69 @@ pub fn move_bullets(
         }
     }
 }
+
+// -------------------- Bullet Hits Zombie --------------------
 pub fn bullet_hit_zombie(
     mut commands: Commands,
     bullet_query: Query<(Entity, &Transform), With<Bullet>>,
     mut zombie_query: Query<(Entity, &Transform, &mut Zombie)>,
     mut score: ResMut<Score>,
 ) {
+    let mut rng = rand::thread_rng();
+
     for (b_entity, b_transform) in bullet_query.iter() {
         for (z_entity, z_transform, mut zombie) in zombie_query.iter_mut() {
-            let distance = b_transform.translation.distance(z_transform.translation);
-            if distance < 25.0 {
+            if b_transform.translation.distance(z_transform.translation) < 25.0 {
                 // Despawn bullet
                 commands.entity(b_entity).despawn();
 
-                // Reduce zombie health
-                zombie.health -= 25.0;
-
-                // Spawn floating "+10" for hit
-                commands.spawn(Text2dBundle {
-                    text: Text::from_section(
-                        "+10",
-                        TextStyle {
-                            font: Default::default(),
-                            font_size: 20.0,
-                            color: Color::YELLOW,
-                        },
-                    ),
-                    transform: Transform::from_translation(z_transform.translation + Vec3::new(0.0, 20.0, 1.0)),
-                    ..default()
-                })
-                .insert(FloatingScore { timer: Timer::from_seconds(0.5, TimerMode::Once) });
-
-                // Increment score for hit
+                // Apply damage and score for hit
+                apply_damage(&mut zombie, 25.0);
+                add_floating_score(&mut commands, z_transform.translation, "+10", Color::YELLOW, &mut rng);
                 score.0 += 10;
 
                 // If zombie is dead
                 if zombie.health <= 0.0 {
-                    commands.entity(z_entity).despawn_recursive(); // removes zombie and health bar
-
-                    // Spawn floating "+100" for kill
-                    commands.spawn(Text2dBundle {
-                        text: Text::from_section(
-                            "+100",
-                            TextStyle {
-                                font: Default::default(),
-                                font_size: 20.0,
-                                color: Color::GOLD,
-                            },
-                        ),
-                        transform: Transform::from_translation(z_transform.translation + Vec3::new(0.0, 20.0, 1.0)),
-                        ..default()
-                    })
-                    .insert(FloatingScore { timer: Timer::from_seconds(0.5, TimerMode::Once) });
-
-                    // Increment score for kill
-                    score.0 += 90; // 10 already added above, so total 100
+                    commands.entity(z_entity).despawn_recursive();
+                    add_floating_score(&mut commands, z_transform.translation, "+100", Color::GOLD, &mut rng);
+                    score.0 += 90; // total 100
                 }
             }
         }
     }
 }
 
+// -------------------- Helper Functions --------------------
+fn apply_damage(zombie: &mut Zombie, amount: f32) {
+    zombie.health -= amount;
+}
 
+fn add_floating_score(commands: &mut Commands, position: Vec3, text: &str, color: Color, rng: &mut impl Rng) {
+    let x_offset = rng.gen_range(-10.0..10.0);
+    let y_offset = rng.gen_range(10.0..25.0);
 
+    commands.spawn(Text2dBundle {
+        text: Text::from_section(
+            text,
+            TextStyle {
+                font: Default::default(),
+                font_size: 20.0,
+                color,
+            },
+        ),
+        transform: Transform::from_translation(position + Vec3::new(x_offset, y_offset, 1.0)),
+        ..default()
+    })
+    .insert(FloatingScore { timer: Timer::from_seconds(0.5, TimerMode::Once) });
+}
 
-
+// -------------------- Setup Player --------------------
 pub fn setup_player(mut commands: Commands) {
     commands.spawn(SpriteBundle {
         transform: Transform::from_xyz(0., -250., 0.),
         sprite: Sprite {
-            color: Color::rgb(0.0, 0.0, 1.0),
-            custom_size: Some(Vec2::new(10., 10.)), // Adjust size as needed
+            color: Color::BLUE,
+            custom_size: Some(Vec2::new(10., 10.)),
             ..default()
         },
         ..default()
