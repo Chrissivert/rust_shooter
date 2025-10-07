@@ -89,9 +89,11 @@ pub fn shooting(
     weapons: Res<Weapons>,
     mut weapon: ResMut<Weapon>,
 ) {
-    // Check if minigun is active
-    weapon.is_minigun = weapons.active == 1;
+    // Update weapon type
+    weapon.is_minigun = weapons.active == 2; // minigun index
+    let is_shotgun = weapons.active == 1;    // shotgun index
 
+    // Determine if shooting
     let shoot = if weapon.is_minigun {
         weapon.fire_timer.tick(time.delta());
         keyboard.pressed(KeyCode::Space) && weapon.fire_timer.finished()
@@ -101,25 +103,60 @@ pub fn shooting(
 
     if shoot {
         for transform in &query {
-            commands.spawn(SpriteBundle {
-                transform: Transform::from_xyz(transform.translation.x, transform.translation.y + 30., 0.),
-                sprite: Sprite { color: Color::YELLOW, custom_size: Some(Vec2::new(3., 7.)), ..default() },
-                ..default()
-            }).insert(Bullet);
+            if is_shotgun {
+                // Spawn multiple bullets with spread
+                let angles: [f32; 5] = [-0.2, -0.1, 0.0, 0.1, 0.2]; // radians
+                for &angle in &angles {
+                    let t = transform.translation;
+                    let dir = Vec3::new(angle.sin(), 1.0, 0.0).normalize();
+                    commands.spawn(SpriteBundle {
+                        transform: Transform::from_translation(t + Vec3::new(0., 30., 0.)),
+                        sprite: Sprite { color: Color::ORANGE, custom_size: Some(Vec2::new(3., 7.)), ..default() },
+                        ..default()
+                    })
+                    .insert(Bullet)
+                    .insert(ShotgunBullet { direction: dir });
+                }
+            } else {
+                // Regular bullet (pistol or minigun)
+                commands.spawn(SpriteBundle {
+                    transform: Transform::from_xyz(transform.translation.x, transform.translation.y + 30., 0.),
+                    sprite: Sprite { color: Color::YELLOW, custom_size: Some(Vec2::new(3., 7.)), ..default() },
+                    ..default()
+                }).insert(Bullet);
+            }
 
+            // Play shooting sound
             let sound = asset_server.load("audio/bullet.ogg");
             commands.spawn(AudioBundle { source: sound, settings: PlaybackSettings::default(), ..default() });
         }
     }
 }
 
+#[derive(Component)]
+pub struct ShotgunBullet {
+    pub direction: Vec3,
+}
 
-pub fn move_bullets(mut commands: Commands, mut query: Query<(Entity, &mut Transform), With<Bullet>>, time: Res<Time>) {
-    for (e, mut t) in &mut query {
-        t.translation.y += BULLET_SPEED * time.delta_seconds();
-        if t.translation.y > 300. { commands.entity(e).despawn(); }
+// Update bullet movement for shotgun bullets
+pub fn move_bullets(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut Transform, Option<&ShotgunBullet>), With<Bullet>>,
+    time: Res<Time>
+) {
+    for (e, mut t, shotgun) in &mut query {
+        let dir = if let Some(s) = shotgun {
+            s.direction
+        } else {
+            Vec3::Y
+        };
+        t.translation += dir * BULLET_SPEED * time.delta_seconds();
+        if t.translation.y > 300. || t.translation.x.abs() > 400. {
+            commands.entity(e).despawn();
+        }
     }
 }
+
 
 pub fn bullet_hit_zombie(mut commands: Commands, bullet_query: Query<(Entity, &Transform), With<Bullet>>,
                          mut zombie_query: Query<(Entity, &Transform, &mut Zombie)>, mut score: ResMut<Score>) {
